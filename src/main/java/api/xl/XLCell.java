@@ -1,9 +1,4 @@
-package una.filesorganizeridoffice.business.api.xl;
-
-import una.filesorganizeridoffice.business.api.xl.util.DateUtil;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
+package api.xl;
 
 public final class XLCell<T> {
     private final String columnName;

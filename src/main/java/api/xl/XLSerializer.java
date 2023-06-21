@@ -1,13 +1,11 @@
-package una.filesorganizeridoffice.business.api.xl;
+package api.xl;
 
+import api.xl.annotations.XLCellColumn;
+import api.xl.annotations.XLCellGetValue;
+import api.xl.annotations.XLCellSetValue;
+import api.xl.annotations.XLSerializable;
+import api.xl.exceptions.XLSerializableException;
 import org.jetbrains.annotations.NotNull;
-import una.filesorganizeridoffice.business.api.xl.XLCell;
-import una.filesorganizeridoffice.business.api.xl.XLRow;
-import una.filesorganizeridoffice.business.api.xl.annotations.XLCellColumn;
-import una.filesorganizeridoffice.business.api.xl.annotations.XLCellGetValue;
-import una.filesorganizeridoffice.business.api.xl.annotations.XLCellSetValue;
-import una.filesorganizeridoffice.business.api.xl.annotations.XLSerializable;
-import una.filesorganizeridoffice.business.api.xl.exceptions.XLSerializableException;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;

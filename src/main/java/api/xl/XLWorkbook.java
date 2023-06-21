@@ -1,4 +1,4 @@
-package una.filesorganizeridoffice.business.api.xl;
+package api.xl;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -6,9 +6,10 @@ import org.w3c.dom.NodeList;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
-import static una.filesorganizeridoffice.business.api.xl.util.NumberUtil.isNumber;
+import static api.xl.util.NumberUtil.isNumber;
 
 /**
  * This class represents a xlsx workbook. This class contains main xlsx archives ass sheets, sharedString and styles and performs
@@ -30,7 +31,7 @@ public final class XLWorkbook {
      * @param xlUrl
      */
     public XLWorkbook(String xlUrl) {
-        xlFile = Path.of(xlUrl);
+        xlFile = Paths.get(xlUrl);
         xlName = xlFile.getFileName().toString();
     }
 

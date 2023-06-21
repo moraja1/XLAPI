@@ -1,4 +1,4 @@
-package una.filesorganizeridoffice.business.api.xl;
+package api.xl;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -15,12 +15,13 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Enumeration;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
-import static una.filesorganizeridoffice.business.api.xl.util.XLPaths.*;
+import static api.xl.util.XLPaths.*;
 
 public final class XLFactory {
     /**
@@ -97,7 +98,7 @@ public final class XLFactory {
      */
     public static void saveWorkbook(XLWorkbook xlWorkbook, String filepath) throws ParserConfigurationException, SAXException, TransformerException, IOException {
         //Create a xlsx in the temp directory where the information will be placed.
-        Path newXL = Path.of(filepath);
+        Path newXL = Paths.get(filepath);
         if(!Files.exists(newXL)){
             Files.copy(xlWorkbook.getXlPath(), newXL);
         }

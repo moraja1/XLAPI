@@ -1,6 +1,5 @@
-package una.filesorganizeridoffice.business.api.xl.util;
+package api.xl.util;
 
-import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
 public final class XLPaths {

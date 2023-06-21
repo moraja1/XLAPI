@@ -1,4 +1,4 @@
-package una.filesorganizeridoffice.business.api.xl.exceptions;
+package api.xl.exceptions;
 
 public final class XLSerializableException extends Exception{
     public XLSerializableException() {
