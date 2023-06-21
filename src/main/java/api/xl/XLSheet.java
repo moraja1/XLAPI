@@ -16,10 +16,12 @@ import static api.xl.util.DateUtil.toDate;
 import static api.xl.util.NumberUtil.isNumber;
 import static api.xl.util.NumberUtil.isScientificNotation;
 
-public final class XLSheet {
+public abstract class XLSheet {
     private final XLWorkbook xlWorkbook;
     private final Document xlSheet;
     private final String name;
+    private final String rId;
+    private final String sheetId;
     private final List<String> ignoreColumnCases = new ArrayList<>();
 
     /***
@@ -28,13 +30,12 @@ public final class XLSheet {
      * @param document
      * @throws ParserConfigurationException
      */
-    public XLSheet(XLWorkbook xlWorkbook, Document document, String name) throws ParserConfigurationException {
+    public XLSheet(XLWorkbook xlWorkbook, Document document, String name, String rId, String sheetId) throws ParserConfigurationException {
         this.xlWorkbook = xlWorkbook;
-        this.xlSheet = xlWorkbook.getDbf().newDocumentBuilder().newDocument();
-        this.xlSheet.appendChild(
-                this.xlSheet.importNode(document.getDocumentElement(), true)
-        );
+        this.xlSheet = document;
         this.name = name;
+        this.rId = rId;
+        this.sheetId = sheetId;
     }
 
     /***
