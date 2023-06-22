@@ -4,7 +4,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
-import javax.xml.parsers.ParserConfigurationException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;

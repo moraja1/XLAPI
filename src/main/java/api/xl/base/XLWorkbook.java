@@ -1,15 +1,9 @@
 package api.xl.base;
 
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.*;
 import java.util.zip.ZipFile;
-
-import static api.xl.util.XLNumberUtil.isNumber;
 
 /**
  * This class represents a xlsx workbook. This class contains main xlsx archives ass sheets, sharedString and styles and performs
