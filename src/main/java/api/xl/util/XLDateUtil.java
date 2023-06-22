@@ -3,7 +3,7 @@ package api.xl.util;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
-public final class DateUtil {
+public final class XLDateUtil {
     private static final LocalDate startDate = LocalDate.of(1900, 1, 1);
     public static LocalDate toDate(String value) {
         double dias = Double.parseDouble(value);

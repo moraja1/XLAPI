@@ -1,9 +1,12 @@
 package api.xl.base;
 
+import api.xl.constants.XLTags;
 import api.xl.exceptions.XLFactoryException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
+import org.w3c.dom.ls.DOMImplementationLS;
+import org.w3c.dom.ls.LSSerializer;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -14,18 +17,23 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.*;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Enumeration;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import static api.xl.util.NumberUtil.isNumber;
 import static api.xl.constants.XLPaths.*;
+import static api.xl.util.XLNumberUtil.isNumber;
 
+/**
+ * This class contains the necessary methods to create, open and save workbooks as well as some important implementations
+ */
 public final class XLFactory {
 
-    private static Predicate<Document> exists = Objects::isNull;
+    private static final Predicate<Document> exists = Objects::nonNull;
 
     /**
      * Return a XLWorkbook object if the xlsx file passed exists, it's openable and readable, and it's a xlsx file.
@@ -34,32 +42,40 @@ public final class XLFactory {
      * @throws XLFactoryException when XLWorkbook can not be created.
      */
     public static XLWorkbook openWorkbook(File xlsx) throws XLFactoryException {
-        XLWorkbook w;
         if (!xlsx.exists() || xlsx.isDirectory() || !xlsx.isFile() || !xlsx.getName().endsWith(".xlsx")) {
             return null;
         }
+        final XLWorkbook w;
+        final ZipFile zf;
         try {
-            w = new Workbook(xlsx);
+            zf = new ZipFile(xlsx);
         } catch (IOException e) {
-            throw new XLFactoryException("Unable to create XLWorkbook, please check the filepath and try again.");
+            throw new XLFactoryException("Unable to open Workbook, please check the filepath and try again.");
         }
-        //Obtaining xml basic files
-        ZipFile zipFile = w.getXlFile();
+        //Load required Documents
+        final Document workbookDoc;
+        final Document sharedStrDoc;
+        final Document stylesDoc;
 
-        /*ZipEntry workbookEntry = zipFile.getEntry(WORKBOOK);
-        w.setXlWorkbook(createDocument(zipFile, workbookEntry));
+        ZipEntry workbookEntry = zf.getEntry(WORKBOOK);
+        workbookDoc = createDocument(zf, workbookEntry);
 
-        ZipEntry sharedStringsEntry = zipFile.getEntry(SHARED_STRINGS);
-        w.setXlSharedStrings(createDocument(zipFile, sharedStringsEntry));
+        ZipEntry sharedStringsEntry = zf.getEntry(SHARED_STRINGS);
+        if(sharedStringsEntry == null){
+            sharedStrDoc = XLTags.ShredStr.defaultSharedStr();
+        }else{
+            sharedStrDoc = createDocument(zf, sharedStringsEntry);
+        }
 
-        ZipEntry stylesEntry = zipFile.getEntry(STYLES);
-        w.setXlStyles(createDocument(zipFile, stylesEntry));*/
+        ZipEntry stylesEntry = zf.getEntry(STYLES);
+        stylesDoc = createDocument(zf, stylesEntry);
 
-        Enumeration<? extends ZipEntry> entries = zipFile.entries();
+        w = new XLWorkbookImp(zf, workbookDoc, sharedStrDoc, stylesDoc);
+
+        Enumeration<? extends ZipEntry> entries = zf.entries();
         while (entries.hasMoreElements()) {
             ZipEntry entry = entries.nextElement();
-            System.out.println(entry.getName());
-            /*if (entry.getName().contains("sheet")) {
+            if (entry.getName().contains("sheet")) {
                 //Set sheets in xlWorkbook
                 Document workbook = w.getXlWorkbook();
                 NodeList sheets = workbook.getElementsByTagName("sheet");
@@ -69,18 +85,36 @@ public final class XLFactory {
                     String sheet_rId = sheet.getAttribute("r:id");
                     String sheetId = sheet.getAttribute("sheetId");
                     if(entry.getName().equals(SHEET.apply(sheetId))){
-                        System.out.println("Yeahhh");
+                        XLSheet xlSheet = new XLSheet(w, createDocument(zf, entry), sheetName, sheet_rId, sheetId);
+                        w.addSheet(xlSheet);
                     }
                 }
-            }*/
+            }
         }
 
-
+        //Verify results
         if ((exists.test(w.getXlWorkbook())) ||
                 exists.test(w.getXlStyles()) || exists.test(w.getXlSharedStrings())) {
-            return null;
+            return w;
         }
-        return w;
+        return null;
+    }
+
+    /**
+     * Creates and returns a new empty workbook
+     * @return XLWorkbook in an empty state
+     * @throws XLFactoryException if there is an error opening the new workbook.
+     */
+    public static XLWorkbook newWorkbook() throws XLFactoryException {
+        URL url = XLWorkbook.class.getResource("../Book1.xlsx");
+        XLWorkbook w;
+        try {
+            File xlsx = new File(url.toURI());
+            w = XLFactory.openWorkbook(xlsx);
+        } catch (URISyntaxException | XLFactoryException e) {
+            throw new XLFactoryException("Unable to create a new Workbook, please use openWorkbook method and pass a valid xlsx file.");
+        }
+        return  w;
     }
 
     private static Document createDocument(ZipFile z, ZipEntry entry) {
@@ -210,18 +244,40 @@ public final class XLFactory {
         }
     }
 
-    private static final class Workbook extends XLWorkbook {
+    /***
+     * Print in console any Node. Test purposes.
+     * @param node xml Node to be printed.
+     */
+    public static void toStringNode(Element node){
+        Document document = node.getOwnerDocument();
+        DOMImplementationLS domImplLS = (DOMImplementationLS) document.getImplementation();
+        LSSerializer serializer = domImplLS.createLSSerializer();
+        serializer.getDomConfig().setParameter("format-pretty-print", true);
+        String str = serializer.writeToString(node);
+        System.out.println(str);
+    }
+
+    private static class XLWorkbookImp extends XLWorkbook {
+
         /**
          * Creates a XLWorkbook and captures its name.
          *
          * @param xlsx
+         * @param xlWorkbook
+         * @param xlSharedStrings
+         * @param xlStyles
          */
-        public Workbook(File xlsx) throws IOException {
-            super(xlsx);
+        public XLWorkbookImp(ZipFile xlsx, Document xlWorkbook, Document xlSharedStrings, Document xlStyles) {
+            super(xlsx, xlWorkbook, xlSharedStrings, xlStyles);
         }
 
+        /***
+         * Get the value from sharedString.xml based on the index passed by param.
+         * @param sharedStrIdx Value Index
+         * @return String with the value or empty String if index it's out of bounds.
+         */
         @Override
-        public String getSharedStrValue(Integer sharedStrIdx) {
+        public String getSharedStrValue(Integer sharedStrIdx){
             String v;
             NodeList siNodes = xlSharedStrings.getElementsByTagName("si");
             if (sharedStrIdx >= 0 && sharedStrIdx < siNodes.getLength()) {
@@ -235,9 +291,13 @@ public final class XLFactory {
             }
             return "";
         }
-
+        /**
+         * Inserts a shared string in sharedStrings.xml if the value passed is no empty.
+         * @param textContext that will be placed as shared string.
+         * @return int value index of the shared string if exists.
+         */
         @Override
-        public int createSharedStr(String textContext) {
+        public int createSharedStr(String textContext){
             int idx = isSharedStr(textContext);
             if (!textContext.isEmpty() && !isNumber(textContext)) {
                 if (idx != -1) {
@@ -260,6 +320,11 @@ public final class XLFactory {
             return isSharedStr(textContext);
         }
 
+        /**
+         * Returns the index of a specific String value if it is a sharedString, -1 if it is not a sharedString value.
+         * @param value to look for in sharedStrings.xml
+         * @return value index or -1 if it does not exist
+         */
         @Override
         public int isSharedStr(String value) {
             NodeList siNodes = xlSharedStrings.getElementsByTagName("si");

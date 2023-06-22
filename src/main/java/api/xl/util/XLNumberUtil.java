@@ -2,7 +2,7 @@ package api.xl.util;
 
 import java.math.BigDecimal;
 
-public final class NumberUtil {
+public final class XLNumberUtil {
     /***
      * Detects whether a String contains a Scientific Notation Number
      * @param numberString String vale

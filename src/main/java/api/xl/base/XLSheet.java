@@ -10,27 +10,26 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-import static api.xl.util.Converter.cellTypetoString;
-import static api.xl.util.DateUtil.isDate;
-import static api.xl.util.DateUtil.toDate;
-import static api.xl.util.NumberUtil.isNumber;
-import static api.xl.util.NumberUtil.isScientificNotation;
+import static api.xl.util.XLConverter.cellTypetoString;
+import static api.xl.util.XLDateUtil.isDate;
+import static api.xl.util.XLDateUtil.toDate;
+import static api.xl.util.XLNumberUtil.isNumber;
+import static api.xl.util.XLNumberUtil.isScientificNotation;
 
-public abstract class XLSheet {
-    private final XLWorkbook xlWorkbook;
-    private final Document xlSheet;
+public class XLSheet {
+    protected final XLWorkbook xlWorkbook;
+    protected final Document xlSheet;
     private final String name;
     private final String rId;
     private final String sheetId;
-    private final List<String> ignoreColumnCases = new ArrayList<>();
+    protected final List<String> ignoreColumnCases = new ArrayList<>();
 
     /***
      * Creates a XLSheet
      * @param xlWorkbook
      * @param document
-     * @throws ParserConfigurationException
      */
-    public XLSheet(XLWorkbook xlWorkbook, Document document, String name, String rId, String sheetId) throws ParserConfigurationException {
+    public XLSheet(XLWorkbook xlWorkbook, Document document, String name, String rId, String sheetId) {
         this.xlWorkbook = xlWorkbook;
         this.xlSheet = document;
         this.name = name;
@@ -44,7 +43,7 @@ public abstract class XLSheet {
      * @param idx int
      * @return XLRow
      */
-    public XLRow getRow(int idx) {
+    public XLRow getRow(int idx){
         if(idx > 0) {
             //Cell memory space
             XLRow row = new XLRow(idx);
@@ -119,7 +118,7 @@ public abstract class XLSheet {
      * If there is not a row already in that row number, then it will create the new row.
      * @param row with the cells that will be placed in the sheet.
      */
-    public void pasteRow(XLRow row) {
+    public void pasteRow(XLRow row){
         int rowIdx = row.getRowNum();
         if(rowIdx > 0){
             Element rowTag = getRowElement(rowIdx);
@@ -162,7 +161,7 @@ public abstract class XLSheet {
         }
     }
 
-    private Element getCell(Element rowTag, String rValue) {
+    protected Element getCell(Element rowTag, String rValue) {
         NodeList xmlCells = rowTag.getElementsByTagName("c");
         Element xmlCell;
 
@@ -181,7 +180,7 @@ public abstract class XLSheet {
         return xmlCell;
     }
 
-    private Element getRowElement(int idx) {
+    protected Element getRowElement(int idx) {
         NodeList rows = xlSheet.getElementsByTagName("row");
         int rowsCant = rows.getLength();
         if(idx <= rowsCant) {
@@ -195,7 +194,7 @@ public abstract class XLSheet {
      * @param e Element
      * @return Integer if it is a sharedString or null if no
      */
-    private Integer getSharedIdx(Element e) {
+    protected Integer getSharedIdx(Element e) {
         if(e.hasAttribute("t")){
            String tValue = e.getFirstChild().getFirstChild().getNodeValue();
            return Integer.valueOf(tValue);
