@@ -21,7 +21,6 @@ import java.io.*;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Enumeration;
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -32,6 +31,7 @@ import java.util.zip.ZipOutputStream;
 import static api.xl.constants.XLPaths.*;
 import static api.xl.constants.XLTags.ShredStr.*;
 import static api.xl.util.XLNumberUtil.isNumber;
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 /**
  * This class contains the necessary methods to create, open and save workbooks as well as some important implementations
@@ -149,14 +149,13 @@ public final class XLFactory {
      */
     public static void saveWorkbook(XLWorkbook w, String filepath) throws IOException {
         //Create a xlsx in the temp directory where the information will be placed.
-        final Path newXL = Path.of(filepath);
-        if(!Files.exists(newXL)){
-            Files.copy(Path.of(w.getXlFile().getName()), newXL);
-        }
+        File newXL = new File(filepath);
+        File currentXL = new File(w.getXlFile().getName());
+        Files.copy(currentXL.toPath(), newXL.toPath(), REPLACE_EXISTING);
 
         //Iterate over entries and save them into the new xlsx. Verifies the xml files and changes the last xml for the new one
-        final ZipFile zf = w.getXlFile();
-        final ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(newXL.toFile()));
+        ZipFile zf = new ZipFile(w.getXlFile().getName());
+        ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(newXL));
 
         Enumeration<? extends ZipEntry> entries = zf.entries();
         while(entries.hasMoreElements()) {
@@ -171,7 +170,7 @@ public final class XLFactory {
                 writeDocumentOut(w.getXlWorkbook(), entry, zipOut);
             } else if (entryName.contains("sheet")) {
                 for (int i = 0; i < w.sheetCount(); i++) {
-                    if (entry.getName().equals(SHEET.apply(String.valueOf((i+1))))) {
+                    if (entryName.equals(SHEET.apply(String.valueOf((i+1))))) {
                         writeDocumentOut(w.getSheet(i).getXlSheet(), entry, zipOut);
                     }
                 }
@@ -179,24 +178,7 @@ public final class XLFactory {
                 writeDocumentOut(zf, entry, zipOut);
             }
         }
-
-    }
-
-    private static void writeDocumentOut(ZipFile zf, ZipEntry entry, ZipOutputStream zipOut) {
-        final InputStream inputStream;
-        int bytesRead;
-        final byte[] buffer = new byte[1024];
-        ZipEntry newEntry = new ZipEntry(entry.getName());
-        try {
-            zipOut.putNextEntry(newEntry);
-            inputStream = zf.getInputStream(entry);
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                zipOut.write(buffer, 0, bytesRead);
-            }
-            inputStream.close();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        zipOut.close();
     }
 
     private static void writeDocumentOut(Document doc, ZipEntry entry, ZipOutputStream zipOut) {
@@ -205,6 +187,23 @@ public final class XLFactory {
         try {
             zipOut.putNextEntry(newEntry);
             zipOut.write(dB);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void writeDocumentOut(ZipFile zf, ZipEntry entry, ZipOutputStream zipOut) {
+        InputStream inputStream;
+        int bytesRead;
+        byte[] buffer = new byte[1024];
+        ZipEntry newEntry = new ZipEntry(entry.getName());
+        try {
+            zipOut.putNextEntry(newEntry);
+            inputStream = zf.getInputStream(entry);
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                zipOut.write(buffer, 0, bytesRead);
+            }
+            inputStream.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
