@@ -1,4 +1,4 @@
-package api.xl;
+package api.xl.base;
 
 public final class XLCell<T> {
     private final String columnName;

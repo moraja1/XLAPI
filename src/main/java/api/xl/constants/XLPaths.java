@@ -1,4 +1,4 @@
-package api.xl.util;
+package api.xl.constants;
 
 import java.util.function.UnaryOperator;
 

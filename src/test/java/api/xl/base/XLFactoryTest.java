@@ -1,22 +1,18 @@
 package api.xl.base;
 
-import api.xl.XLWorkbook;
 import api.xl.exceptions.XLFactoryException;
 
 import java.io.File;
-import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 class XLFactoryTest {
     public static void main(String[] args) {
-        URL url = XLWorkbook.class.getResource("EmptyExcel.xlsx");
+        URL url = XLWorkbook.class.getResource("../Book1.xlsx");
         XLWorkbook workbook;
         try {
             File xlsx = new File(url.toURI());
-            workbook = XLFactory.buildWorkbook(xlsx);
+            workbook = XLFactory.openWorkbook(xlsx);
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         } catch (XLFactoryException e) {

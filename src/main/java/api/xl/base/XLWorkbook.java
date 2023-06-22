@@ -1,4 +1,4 @@
-package api.xl;
+package api.xl.base;
 
 import org.w3c.dom.Document;
 
@@ -18,7 +18,6 @@ public abstract class XLWorkbook {
     protected Document xlWorkbook;
     protected Document xlSharedStrings;
     protected Document xlStyles;
-    protected Document xlTheme;
     final List<XLSheet> xlSheets = new LinkedList<>();
     /**
      * Creates a XLWorkbook and captures its name.
@@ -64,15 +63,6 @@ public abstract class XLWorkbook {
     public void setXlStyles(Document xlStyles) {
         this.xlStyles = xlStyles;
     }
-
-    public Document getXlTheme() {
-        return xlTheme;
-    }
-
-    public void setXlTheme(Document xlTheme) {
-        this.xlTheme = xlTheme;
-    }
-
     /***
      * Get the value from sharedString.xml based on the index passed by param.
      * @param sharedStrIdx Value Index

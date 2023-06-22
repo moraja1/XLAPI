@@ -1,7 +1,5 @@
 package api.xl.base;
 
-import api.xl.XLSheet;
-import api.xl.XLWorkbook;
 import api.xl.exceptions.XLFactoryException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -20,10 +18,10 @@ import java.util.Enumeration;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
 import static api.xl.util.NumberUtil.isNumber;
+import static api.xl.constants.XLPaths.*;
 
 public final class XLFactory {
 
@@ -35,9 +33,9 @@ public final class XLFactory {
      * @return XLWorkbook if file passed is accepted, null if not.
      * @throws XLFactoryException when XLWorkbook can not be created.
      */
-    public static XLWorkbook buildWorkbook(File xlsx) throws XLFactoryException {
+    public static XLWorkbook openWorkbook(File xlsx) throws XLFactoryException {
         XLWorkbook w;
-        if(!xlsx.exists() || xlsx.isDirectory() || !xlsx.isFile() || !xlsx.getName().endsWith(".xlsx")){
+        if (!xlsx.exists() || xlsx.isDirectory() || !xlsx.isFile() || !xlsx.getName().endsWith(".xlsx")) {
             return null;
         }
         try {
@@ -47,43 +45,58 @@ public final class XLFactory {
         }
         //Obtaining xml basic files
         ZipFile zipFile = w.getXlFile();
+
+        /*ZipEntry workbookEntry = zipFile.getEntry(WORKBOOK);
+        w.setXlWorkbook(createDocument(zipFile, workbookEntry));
+
+        ZipEntry sharedStringsEntry = zipFile.getEntry(SHARED_STRINGS);
+        w.setXlSharedStrings(createDocument(zipFile, sharedStringsEntry));
+
+        ZipEntry stylesEntry = zipFile.getEntry(STYLES);
+        w.setXlStyles(createDocument(zipFile, stylesEntry));*/
+
         Enumeration<? extends ZipEntry> entries = zipFile.entries();
-        while(entries.hasMoreElements()){
+        while (entries.hasMoreElements()) {
             ZipEntry entry = entries.nextElement();
-            //System.out.println(entry.getName());
-        /*if (entry.getName().equals(SHARED_STRINGS)) {
-            xlWorkbook.setXlSharedStrings(createDocument(zipFile, entry));
-        }else if (entry.getName().equals(STYLES)) {
-            xlWorkbook.setXlStyles(createDocument(zipFile, entry));
-        }else if (entry.getName().equals(WORKBOOK)) {
-            xlWorkbook.setXlWorkbook(createDocument(zipFile, entry));
-        }else if(entry.getName().contains("sheet")){
-            //Set sheets in xlWorkbook
-            Document workbook = xlWorkbook.getXlWorkbook();
-            NodeList sheets = workbook.getElementsByTagName("sheet");
-        }*/
+            System.out.println(entry.getName());
+            /*if (entry.getName().contains("sheet")) {
+                //Set sheets in xlWorkbook
+                Document workbook = w.getXlWorkbook();
+                NodeList sheets = workbook.getElementsByTagName("sheet");
+                for (int i = 0; i < sheets.getLength(); i++) {
+                    Element sheet = (Element) sheets.item(i);
+                    String sheetName = sheet.getAttribute("name");
+                    String sheet_rId = sheet.getAttribute("r:id");
+                    String sheetId = sheet.getAttribute("sheetId");
+                    if(entry.getName().equals(SHEET.apply(sheetId))){
+                        System.out.println("Yeahhh");
+                    }
+                }
+            }*/
         }
 
-        /*for (int i = 0; i < sheets.getLength(); i++) {
-            Element sheet = (Element) sheets.item(i);
-            String sheetName = sheet.getAttributeNode("name").getValue();
-            String sheet_rId = sheet.getAttributeNode("r:id").getValue();
-            //xlWorkbook.addSheet(sheet_rId, sheetName);
-        }*/
-        if((exists.test(w.getXlWorkbook())) || exists.test(w.getXlTheme()) ||
-               exists.test(w.getXlStyles())  || exists.test(w.getXlSharedStrings())){
+
+        if ((exists.test(w.getXlWorkbook())) ||
+                exists.test(w.getXlStyles()) || exists.test(w.getXlSharedStrings())) {
             return null;
         }
         return w;
     }
-    private static Document createDocument(ZipFile z,ZipEntry entry) throws IOException, ParserConfigurationException, SAXException {
-        InputStream inputStream = z.getInputStream(entry);
-        return DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(inputStream);
+
+    private static Document createDocument(ZipFile z, ZipEntry entry) {
+        InputStream inputStream = null;
+        try {
+            inputStream = z.getInputStream(entry);
+            return DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(inputStream);
+        } catch (IOException | ParserConfigurationException | SAXException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
      * Creates a Document of the sheet with the filename "sheet" plus the index passed by param plus ".xml" located in
      * the Workbook file passed by Param.
+     *
      * @param w XLWorkbook
      * @param i Integer
      * @return XLSheet if the sheet with the name exists, or null if not.
@@ -108,6 +121,7 @@ public final class XLFactory {
     /**
      * This method saves the changes made on any book passed by param. This also receives the path where the new xlsx file
      * will be located.
+     *
      * @param xlWorkbook
      * @param filepath
      * @throws ParserConfigurationException
@@ -173,6 +187,7 @@ public final class XLFactory {
         }*/
 
     }
+
     private static void transformXML(Document document, File entryFile) throws TransformerException, IOException {
         TransformerFactory transformerFactory = TransformerFactory.newInstance();
         Transformer transformer = transformerFactory.newTransformer();
@@ -181,6 +196,7 @@ public final class XLFactory {
         StreamResult result = new StreamResult(writer);
         transformer.transform(source, result);
     }
+
     private static byte[] convertDocumentToBytes(Document document) {
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             TransformerFactory transformerFactory = TransformerFactory.newInstance();
@@ -197,20 +213,22 @@ public final class XLFactory {
     private static final class Workbook extends XLWorkbook {
         /**
          * Creates a XLWorkbook and captures its name.
+         *
          * @param xlsx
          */
         public Workbook(File xlsx) throws IOException {
             super(xlsx);
         }
+
         @Override
         public String getSharedStrValue(Integer sharedStrIdx) {
             String v;
             NodeList siNodes = xlSharedStrings.getElementsByTagName("si");
-            if(sharedStrIdx >= 0 && sharedStrIdx < siNodes.getLength()){
+            if (sharedStrIdx >= 0 && sharedStrIdx < siNodes.getLength()) {
                 Element e = (Element) siNodes.item(sharedStrIdx);
                 Element t = (Element) e.getFirstChild();
                 v = t.getTextContent();
-                if(t.hasAttribute("xml:space")){
+                if (t.hasAttribute("xml:space")) {
                     v = v.replaceAll("\\s+$", "");
                 }
                 return v;
@@ -221,8 +239,8 @@ public final class XLFactory {
         @Override
         public int createSharedStr(String textContext) {
             int idx = isSharedStr(textContext);
-            if(!textContext.isEmpty() && !isNumber(textContext)){
-                if(idx != -1){
+            if (!textContext.isEmpty() && !isNumber(textContext)) {
+                if (idx != -1) {
                     return idx;
                 }
                 Element sstTag = (Element) xlSharedStrings.getElementsByTagName("sst").item(0);
@@ -246,13 +264,13 @@ public final class XLFactory {
         public int isSharedStr(String value) {
             NodeList siNodes = xlSharedStrings.getElementsByTagName("si");
             int siNodesLength = siNodes.getLength();
-            if(siNodesLength > 0){
-                for(int i = 0; i < siNodesLength; i++){
+            if (siNodesLength > 0) {
+                for (int i = 0; i < siNodesLength; i++) {
                     Element siTag = (Element) siNodes.item(i);
-                    Element tTag = (Element)siTag.getFirstChild();
+                    Element tTag = (Element) siTag.getFirstChild();
 
                     String tValue = tTag.getTextContent();
-                    if(tValue.equals(value)){
+                    if (tValue.equals(value)) {
                         return i;
                     }
                 }

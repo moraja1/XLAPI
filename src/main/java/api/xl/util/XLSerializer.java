@@ -1,7 +1,7 @@
 package api.xl.util;
 
-import api.xl.XLCell;
-import api.xl.XLRow;
+import api.xl.base.XLCell;
+import api.xl.base.XLRow;
 import api.xl.annotations.XLCellColumn;
 import api.xl.annotations.XLCellGetValue;
 import api.xl.annotations.XLCellSetValue;
