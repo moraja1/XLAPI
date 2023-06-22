@@ -16,8 +16,8 @@ import static api.xl.util.XLNumberUtil.isNumber;
 import static api.xl.util.XLNumberUtil.isScientificNotation;
 
 public class XLSheet {
-    protected final XLWorkbook xlWorkbook;
-    protected final Document xlSheet;
+    private final XLWorkbook xlWorkbook;
+    private final Document xlSheet;
     private final String name;
     private final String rId;
     private final String sheetId;

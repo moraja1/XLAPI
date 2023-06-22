@@ -89,25 +89,18 @@ public final class XLFactory {
 
         w = new XLWorkbookImp(zf, workbookDoc, sharedStrDoc, stylesDoc);
 
-        final Enumeration<? extends ZipEntry> entries = zf.entries();
-        ZipEntry entry;
-        while (entries.hasMoreElements()) {
-            entry = entries.nextElement();
-            if (entry.getName().contains("sheet")) {
-                //Set sheets in xlWorkbook
-                Document workbook = w.getXlWorkbook();
-                NodeList sheets = workbook.getElementsByTagName("sheet");
-                for (int i = 0; i < sheets.getLength(); i++) {
-                    Element sheet = (Element) sheets.item(i);
-                    String sheetName = sheet.getAttribute("name");
-                    String sheet_rId = sheet.getAttribute("r:id");
-                    String sheetId = sheet.getAttribute("sheetId");
-                    if(entry.getName().equals(SHEET.apply(sheetId))){
-                        XLSheet xlSheet = new XLSheet(w, createDocument(zf, entry), sheetName, sheet_rId, sheetId);
-                        w.addSheet(xlSheet);
-                    }
-                }
-            }
+        //Set sheets in xlWorkbook
+        final Document workbook = w.getXlWorkbook();
+        final NodeList sheets = workbook.getElementsByTagName("sheet");
+        for (int i = 0; i < sheets.getLength(); i++) {
+            final Element sheet = (Element) sheets.item(i);
+            final String sheetName = sheet.getAttribute("name");
+            final String sheet_rId = sheet.getAttribute("r:id");
+            final String sheetId = sheet.getAttribute("sheetId");
+            selectedEntry = zf.getEntry(SHEET.apply(sheetId));
+            final Document sheetDoc = createDocument(zf, selectedEntry);
+            final XLSheet xlSheet = new XLSheet(w, sheetDoc, sheetName, sheet_rId, sheetId);
+            w.addSheet(xlSheet);
         }
 
         //Verify results
@@ -137,10 +130,10 @@ public final class XLFactory {
         }
         return  w;
     }
-    private static Document createDocument(ZipFile z, ZipEntry entry) {
+    private static Document createDocument(ZipFile zf, ZipEntry entry) {
         InputStream inputStream = null;
         try {
-            inputStream = z.getInputStream(entry);
+            inputStream = zf.getInputStream(entry);
             return DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(inputStream);
         } catch (IOException | ParserConfigurationException | SAXException e) {
             throw new RuntimeException(e);
@@ -150,67 +143,70 @@ public final class XLFactory {
     /**
      * This method saves the changes made on any book passed by param. This also receives the path where the new xlsx file
      * will be located.
-     *
-     * @param xlWorkbook
-     * @param filepath
-     * @throws ParserConfigurationException
-     * @throws SAXException
-     * @throws TransformerException
+     * @param w XLWorkbook to save
+     * @param filepath String of the
      * @throws IOException
      */
-    public static void saveWorkbook(XLWorkbook xlWorkbook, String filepath) throws ParserConfigurationException, SAXException, TransformerException, IOException {
+    public static void saveWorkbook(XLWorkbook w, String filepath) throws IOException {
         //Create a xlsx in the temp directory where the information will be placed.
         final Path newXL = Path.of(filepath);
         if(!Files.exists(newXL)){
-            Files.copy(Path.of(xlWorkbook.getXlFile().getName()), newXL);
+            Files.copy(Path.of(w.getXlFile().getName()), newXL);
         }
 
         //Iterate over entries and save them into the new xlsx. Verifies the xml files and changes the last xml for the new one
-        final ZipFile zipFile = xlWorkbook.getXlFile();
+        final ZipFile zf = w.getXlFile();
         final ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(newXL.toFile()));
-        boolean entryProcessed = false;
-        final byte[] buffer = new byte[1024];
-        int bytesRead;
-        byte[] documentBytes = null;
 
-        Enumeration<? extends ZipEntry> entries = zipFile.entries();
-        while(entries.hasMoreElements()){
+        Enumeration<? extends ZipEntry> entries = zf.entries();
+        while(entries.hasMoreElements()) {
             ZipEntry entry = entries.nextElement();
             String entryName = entry.getName();
-            ZipEntry newEntry;
 
             if (entryName.equals(SHARED_STRINGS)) {
-                documentBytes = convertDocumentToBytes(xlWorkbook.getXlSharedStrings());
-                entryProcessed = true;
-            }else if (entryName.equals(STYLES)) {
-                documentBytes = convertDocumentToBytes(xlWorkbook.getXlStyles());
-                entryProcessed = true;
-            }else if (entryName.equals(WORKBOOK)) {
-                documentBytes = convertDocumentToBytes(xlWorkbook.getXlWorkbook());
-                entryProcessed = true;
-            }else if(entryName.contains("sheet")){
-                for (int i = 1; i <= xlWorkbook.sheetCount(); i++) {
-                    if(entry.getName().equals(SHEET.apply(String.valueOf(i)))){
-                        documentBytes = convertDocumentToBytes(xlWorkbook.getSheet(i-1).getXlSheet());
-                        entryProcessed = true;
+                writeDocumentOut(w.getXlSharedStrings(), entry, zipOut);
+            } else if (entryName.equals(STYLES)) {
+                writeDocumentOut(w.getXlStyles(), entry, zipOut);
+            } else if (entryName.equals(WORKBOOK)) {
+                writeDocumentOut(w.getXlWorkbook(), entry, zipOut);
+            } else if (entryName.contains("sheet")) {
+                for (int i = 0; i < w.sheetCount(); i++) {
+                    if (entry.getName().equals(SHEET.apply(String.valueOf((i+1))))) {
+                        writeDocumentOut(w.getSheet(i).getXlSheet(), entry, zipOut);
                     }
                 }
-            }
-            newEntry = new ZipEntry(entryName);
-            zipOut.putNextEntry(newEntry);
-
-            if(entryProcessed) {
-                if(documentBytes != null){
-                    zipOut.write(documentBytes);
-                }
-                entryProcessed = false;
             }else{
-                InputStream inputStream = zipFile.getInputStream(entry);
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    zipOut.write(buffer, 0, bytesRead);
-                }
-                inputStream.close();
+                writeDocumentOut(zf, entry, zipOut);
             }
+        }
+
+    }
+
+    private static void writeDocumentOut(ZipFile zf, ZipEntry entry, ZipOutputStream zipOut) {
+        final InputStream inputStream;
+        int bytesRead;
+        final byte[] buffer = new byte[1024];
+        ZipEntry newEntry = new ZipEntry(entry.getName());
+        try {
+            zipOut.putNextEntry(newEntry);
+            inputStream = zf.getInputStream(entry);
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                zipOut.write(buffer, 0, bytesRead);
+            }
+            inputStream.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void writeDocumentOut(Document doc, ZipEntry entry, ZipOutputStream zipOut) {
+        byte[] dB = convertDocumentToBytes(doc);
+        ZipEntry newEntry = new ZipEntry(entry.getName());
+        try {
+            zipOut.putNextEntry(newEntry);
+            zipOut.write(dB);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -226,8 +222,7 @@ public final class XLFactory {
             transformer.transform(new DOMSource(document), new StreamResult(outputStream));
             return outputStream.toByteArray();
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new RuntimeException(e);
         }
     }
 
