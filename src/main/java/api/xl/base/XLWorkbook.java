@@ -77,18 +77,32 @@ public abstract class XLWorkbook {
      * @return int value index of the shared string if exists.
      */
     public abstract int createSharedStr(String textContext);
-
     /**
      * Returns the index of a specific String value if it is a sharedString, -1 if it is not a sharedString value.
      * @param value to look for in sharedStrings.xml
      * @return value index or -1 if it does not exist
      */
     public abstract int isSharedStr(String value);
-    public void addSheet(XLSheet sheet){
+    public void addSheet(XLSheet sheet) {
         xlSheets.add(sheet);
     }
-
-    public XLSheet getSheet(int index){
+    /**
+     * Returns a sheet based on its index or null if it does not exist.
+     * @param index number
+     * @return XLSheet fully implemented
+     */
+    public XLSheet getSheet(int index) {
+        if(index < 0 || index >= xlSheets.size()){
+            return null;
+        }
         return xlSheets.get(index);
+    }
+
+    /**
+     * Returns the amount of sheets existent in the workbook.
+     * @return int
+     */
+    public int sheetCount() {
+        return xlSheets.size();
     }
 }

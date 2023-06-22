@@ -29,7 +29,8 @@ public class XLTags {
         public static final String SI = "si";
         public static final String T = "t";
         public static final String T_XML = "xml";
-        public static final String XML_SPACE = "space";
+        public static final String T_SPACE = "space";
+        public static final String XML_SPACE = T_XML.concat(":").concat(T_SPACE);
         public static final String T_XML_VAL = "preserve";
         public static Document defaultSharedStr() {
             Element SST = defaultSST();
