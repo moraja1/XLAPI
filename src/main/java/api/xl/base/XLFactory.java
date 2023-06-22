@@ -2,6 +2,8 @@ package api.xl.base;
 
 import api.xl.constants.XLTags;
 import api.xl.exceptions.XLFactoryException;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -58,7 +60,7 @@ public final class XLFactory {
      * @return XLWorkbook if file passed is accepted, null if not.
      * @throws XLFactoryException when XLWorkbook can not be created.
      */
-    public static XLWorkbook openWorkbook(File xlsx) throws XLFactoryException {
+    public static @Nullable XLWorkbook openWorkbook(@NotNull File xlsx) throws XLFactoryException {
         if (!xlsx.exists() || xlsx.isDirectory() || !xlsx.isFile() || !xlsx.getName().endsWith(".xlsx")) {
             return null;
         }
@@ -118,20 +120,23 @@ public final class XLFactory {
      */
     public static XLWorkbook newWorkbook() throws XLFactoryException {
         final URL url = XLWorkbook.class.getResource("../Book1.xlsx");
-        final XLWorkbook w;
-        try {
-            File xlsx = new File(url.toURI());
-            w = openWorkbook(xlsx);
-            if(w == null){
+        if(url != null){
+            final XLWorkbook w;
+            try {
+                File xlsx = new File(url.toURI());
+                w = openWorkbook(xlsx);
+                if(w == null){
+                    throw new XLFactoryException("Unable to create a new Workbook, please use openWorkbook method and pass a valid xlsx file.");
+                }
+            } catch (URISyntaxException | XLFactoryException e) {
                 throw new XLFactoryException("Unable to create a new Workbook, please use openWorkbook method and pass a valid xlsx file.");
             }
-        } catch (URISyntaxException | XLFactoryException e) {
-            throw new XLFactoryException("Unable to create a new Workbook, please use openWorkbook method and pass a valid xlsx file.");
+            return  w;
         }
-        return  w;
+        throw new XLFactoryException("Unable to create a new Workbook, please use openWorkbook method and pass a valid xlsx file.");
     }
-    private static Document createDocument(ZipFile zf, ZipEntry entry) {
-        InputStream inputStream = null;
+    private static Document createDocument(@NotNull ZipFile zf, ZipEntry entry) {
+        InputStream inputStream;
         try {
             inputStream = zf.getInputStream(entry);
             return DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(inputStream);
@@ -145,9 +150,8 @@ public final class XLFactory {
      * will be located.
      * @param w XLWorkbook to save
      * @param filepath String of the
-     * @throws IOException
      */
-    public static void saveWorkbook(XLWorkbook w, String filepath) throws IOException {
+    public static void saveWorkbook(@NotNull XLWorkbook w, String filepath) throws IOException {
         //Create a xlsx in the temp directory where the information will be placed.
         File newXL = new File(filepath);
         File currentXL = new File(w.getXlFile().getName());
@@ -163,25 +167,25 @@ public final class XLFactory {
             String entryName = entry.getName();
 
             if (entryName.equals(SHARED_STRINGS)) {
-                writeDocumentOut(w.getXlSharedStrings(), entry, zipOut);
+                writeOut(w.getXlSharedStrings(), entry, zipOut);
             } else if (entryName.equals(STYLES)) {
-                writeDocumentOut(w.getXlStyles(), entry, zipOut);
+                writeOut(w.getXlStyles(), entry, zipOut);
             } else if (entryName.equals(WORKBOOK)) {
-                writeDocumentOut(w.getXlWorkbook(), entry, zipOut);
+                writeOut(w.getXlWorkbook(), entry, zipOut);
             } else if (entryName.contains("sheet")) {
                 for (int i = 0; i < w.sheetCount(); i++) {
                     if (entryName.equals(SHEET.apply(String.valueOf((i+1))))) {
-                        writeDocumentOut(w.getSheet(i).getXlSheet(), entry, zipOut);
+                        writeOut(w.getSheet(i).getXlSheet(), entry, zipOut);
                     }
                 }
             }else{
-                writeDocumentOut(zf, entry, zipOut);
+                writeOut(zf, entry, zipOut);
             }
         }
         zipOut.close();
     }
 
-    private static void writeDocumentOut(Document doc, ZipEntry entry, ZipOutputStream zipOut) {
+    private static void writeOut(Document doc, @NotNull ZipEntry entry, @NotNull ZipOutputStream zipOut) {
         byte[] dB = convertDocumentToBytes(doc);
         ZipEntry newEntry = new ZipEntry(entry.getName());
         try {
@@ -192,7 +196,7 @@ public final class XLFactory {
         }
     }
 
-    private static void writeDocumentOut(ZipFile zf, ZipEntry entry, ZipOutputStream zipOut) {
+    private static void writeOut(@NotNull ZipFile zf, @NotNull ZipEntry entry, @NotNull ZipOutputStream zipOut) {
         InputStream inputStream;
         int bytesRead;
         byte[] buffer = new byte[1024];
@@ -216,7 +220,7 @@ public final class XLFactory {
         transformer.transform(source, result);
     }
 
-    private static byte[] convertDocumentToBytes(Document document) {
+    private static byte @NotNull [] convertDocumentToBytes(Document document) {
         try (final ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             transformer.transform(new DOMSource(document), new StreamResult(outputStream));
             return outputStream.toByteArray();
@@ -229,7 +233,7 @@ public final class XLFactory {
      * Print in console any Node. Test purposes.
      * @param node xml Node to be printed.
      */
-    public static void toStringNode(Element node){
+    public static void toStringNode(@NotNull Element node){
         Document document = node.getOwnerDocument();
         DOMImplementationLS domImplLS = (DOMImplementationLS) document.getImplementation();
         LSSerializer serializer = domImplLS.createLSSerializer();
@@ -239,14 +243,6 @@ public final class XLFactory {
     }
 
     private static class XLWorkbookImp extends XLWorkbook {
-
-        /**
-         * Creates a XLWorkbook and captures its name.
-         * @param xlsx
-         * @param xlWorkbook
-         * @param xlSharedStrings
-         * @param xlStyles
-         */
         public XLWorkbookImp(ZipFile xlsx, Document xlWorkbook, Document xlSharedStrings, Document xlStyles) {
             super(xlsx, xlWorkbook, xlSharedStrings, xlStyles);
         }
